@@ -18,7 +18,7 @@ const WhatsAppSignup = () => {
         window.fbAsyncInit = function () {
             console.log("Before FB init")
             window.FB.init({
-                appId: "1300960535542383",
+                appId: "2140782060178223",
                 cookie: true,
                 xfbml: false,
                 version: "v25.0",
