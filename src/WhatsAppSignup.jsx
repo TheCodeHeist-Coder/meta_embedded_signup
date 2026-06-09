@@ -12,11 +12,13 @@ const WhatsAppSignup = () => {
     useEffect(() => {
         // Prevent loading multiple times
         if (window.FB) return;
+        
 
 
         window.fbAsyncInit = function () {
+            console.log("Before FB init")
             window.FB.init({
-                appId: "",
+                appId: "1300960535542383",
                 cookie: true,
                 xfbml: false,
                 version: "v25.0",
@@ -69,7 +71,7 @@ const WhatsAppSignup = () => {
 
 
         window.FB.login(fbLoginCallback, {
-            config_id: "",
+            config_id: "2425462057937417",
             response_type: "code",
             override_default_response_type: true,
             extras: { version: "v4" },
