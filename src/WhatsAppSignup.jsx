@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 const WhatsAppSignup = () => {
     const [sessionInfo, setSessionInfo] = useState(null);
     const [sdkResponse, setSdkResponse] = useState(null);
+    const [isCoexistence, setIsCoexistence] = useState(true);
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
 
@@ -51,9 +52,7 @@ const WhatsAppSignup = () => {
             const code = response.authResponse.code;
 
 
-            // IMPORTANT:
-            // Send this code to your backend
-            // Exchange it server-to-server for an access token
+            // server logic here like storing code in db and all
             setSessionInfo(code);
             console.log("Authorization Code:", code);
         }
@@ -69,18 +68,38 @@ const WhatsAppSignup = () => {
             return;
         }
 
+        const extras = {
+            version: "v4",
+            ...(isCoexistence && {
+                setup: {},
+                featureType: "whatsapp_business_app_onboarding",
+                sessionInfoVersion: "3",
+            }),
+        };
+
+        console.log("Launching signup with extras:", extras);
 
         window.FB.login(fbLoginCallback, {
-            config_id: "2425462057937417",
+            config_id: "1731129688347511",
             response_type: "code",
             override_default_response_type: true,
-            extras: { version: "v4" },
+            extras,
         });
     };
 
 
     return (
         <div style={{ padding: "20px", fontFamily: "Helvetica, Arial, sans-serif" }}>
+            <label style={{ display: "block", marginBottom: "16px", fontSize: "14px" }}>
+                <input
+                    type="checkbox"
+                    checked={isCoexistence}
+                    onChange={(event) => setIsCoexistence(event.target.checked)}
+                    style={{ marginRight: "8px" }}
+                />
+                Enable WhatsApp Business App coexistence onboarding
+            </label>
+
             <button
                 onClick={launchWhatsAppSignup}
                 style={{
@@ -98,6 +117,9 @@ const WhatsAppSignup = () => {
                 {loading ? "Processing..." : "Login with Facebook"}
             </button>
 
+            <p style={{ marginTop: "12px", fontSize: "14px", color: "#333" }}>
+                Current mode: <strong>{isCoexistence ? "WhatsApp Business App coexistence" : "Standard embedded signup"}</strong>
+            </p>
 
             <h3>Session Info Response:</h3>
             <pre>{sessionInfo && JSON.stringify(sessionInfo, null, 2)}</pre>

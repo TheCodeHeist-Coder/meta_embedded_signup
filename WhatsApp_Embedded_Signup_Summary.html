@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>WhatsApp Embedded Signup — Learning Summary</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 18mm 16mm; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1f2933; font-size: 11.6px; line-height: 1.6; margin: 0;
+  }
+  h1 { font-size: 26px; margin: 0 0 2px; color: #075E54; letter-spacing: -.3px; }
+  h2 {
+    font-size: 16px; color: #075E54; margin: 20px 0 8px;
+    border-bottom: 2px solid #25D366; padding-bottom: 4px;
+  }
+  h3 { font-size: 12.6px; margin: 13px 0 5px; color: #128C7E; }
+  p { margin: 6px 0; }
+  ul { margin: 6px 0 6px 0; padding-left: 18px; }
+  li { margin: 3px 0; }
+  code {
+    font-family: "SF Mono", Consolas, "Courier New", monospace;
+    background: #eef2f5; padding: 1px 4px; border-radius: 3px; font-size: 10px; color: #b0285a;
+  }
+  pre {
+    background: #1e2530; color: #e6edf3; padding: 11px 13px; border-radius: 6px;
+    font-family: "SF Mono", Consolas, monospace; font-size: 9.6px; line-height: 1.55;
+    overflow: hidden; white-space: pre-wrap; margin: 8px 0;
+  }
+  pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 10.2px; }
+  th { background: #075E54; color: #fff; text-align: left; padding: 6px 8px; font-weight: 600; }
+  td { padding: 5px 8px; border-bottom: 1px solid #dde3e8; vertical-align: top; }
+  tr:nth-child(even) td { background: #f5f8fa; }
+  .header {
+    border-left: 5px solid #25D366; padding: 4px 0 4px 14px; margin-bottom: 4px;
+  }
+  .sub { color: #607080; font-size: 10px; margin-top: 2px; }
+  .meta-bar {
+    display: flex; gap: 20px; flex-wrap: wrap; font-size: 10px; color: #52606d;
+    margin: 10px 0 2px; padding: 8px 14px; background: #f0f5f3; border-radius: 5px;
+  }
+  .meta-bar b { color: #075E54; }
+  .callout {
+    background: #fff5f5; border: 1px solid #f4b8b8; border-left: 4px solid #e53e3e;
+    border-radius: 5px; padding: 9px 13px; margin: 9px 0; font-size: 10.6px;
+  }
+  .callout b { color: #c53030; }
+  .tip {
+    background: #f0fff4; border: 1px solid #9ae6b4; border-left: 4px solid #25D366;
+    border-radius: 5px; padding: 9px 13px; margin: 9px 0; font-size: 10.6px;
+  }
+  .grid2 { display: flex; gap: 14px; }
+  .grid2 > div { flex: 1; }
+  .pagebreak { page-break-before: always; }
+  .flow {
+    background: #f5f8fa; border: 1px solid #d8e0e6; border-radius: 6px;
+    padding: 10px 13px; margin: 9px 0; font-size: 10px;
+  }
+  .flow .step { padding: 5px 0; }
+  .flow .arrow { color: #25D366; font-weight: 700; padding: 0 4px; }
+  .tag {
+    display: inline-block; background: #25D366; color: #063; font-weight: 600;
+    border-radius: 10px; padding: 1px 9px; font-size: 8.4px; margin-right: 5px;
+  }
+  footer { margin-top: 14px; padding-top: 6px; border-top: 1px solid #dde3e8; font-size: 8.4px; color: #8a96a3; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>WhatsApp Business API — Embedded Signup</h1>
+  <div class="sub">Day&nbsp;1 Learning Summary &amp; Implementation Reference</div>
+</div>
+<div class="meta-bar">
+  <span><b>Author:</b> Rajkumar</span>
+  <span><b>Date:</b> June 9, 2026</span>
+  <span><b>Stack:</b> React (frontend) + Node.js (backend)</span>
+  <span><b>Scope today:</b> Frontend + initial backend</span>
+  <span><b>Status:</b> In progress (Day 1)</span>
+</div>
+<div class="tip" style="margin-top:8px;"><b>What I covered today:</b> the full <b>frontend</b> Embedded
+Signup flow (Facebook SDK, session listener, launch &amp; response callbacks) and the
+<b>start of the backend</b> (token-exchange endpoint, webhook receiver). Persistence/database is
+<b>not built yet</b> — token storage and data sync are noted below as next steps.</div>
+
+<h2>1. What I Learned — The Core Idea</h2>
+<p><b>Embedded Signup</b> is a secure OAuth flow that lets a customer connect their WhatsApp Business
+account to the Cloud API <i>without ever leaving your application</i>. Rather than redirecting to
+Facebook, the user authenticates inside an SDK-launched dialog and your app receives a short-lived
+<b>authorization code</b>, which the backend exchanges for a long-lived <b>access token</b>.</p>
+<div class="grid2">
+  <div>
+    <h3>Why it matters</h3>
+    <ul>
+      <li>Seamless UX — no external redirects</li>
+      <li>Secure server-side token handling</li>
+      <li>Supports multiple WhatsApp accounts (multi-WABA)</li>
+      <li>Optional <b>Coexistence</b> with the WhatsApp Business App</li>
+    </ul>
+  </div>
+  <div>
+    <h3>Coexistence Mode</h3>
+    <p>Lets a business run the <b>WhatsApp Business App</b> (manual 1:1 chats) and the
+    <b>Cloud API</b> (automation) <i>at the same time</i>, with message &amp; history
+    synchronization between them. It requires a special signup configuration (see §4).</p>
+  </div>
+</div>
+
+<h2>2. How the Flow Works (Architecture)</h2>
+<div class="flow">
+  <div class="step"><span class="tag">Browser</span> User clicks <b>“Sign up with WhatsApp”</b>
+    <span class="arrow">→</span> FB SDK opens login dialog <span class="arrow">→</span> user authorizes
+    <span class="arrow">→</span> receives <code>code</code> (<b>30s TTL</b>) <span class="arrow">→</span> sent to backend</div>
+  <div class="step"><span class="tag">Backend</span> Receives code <span class="arrow">→</span>
+    exchanges for <b>Access Token + WABA ID</b> <span class="arrow">→</span> stores encrypted
+    <span class="arrow">→</span> starts sync (if coexistence)</div>
+  <div class="step"><span class="tag">Webhooks</span> Meta pushes <code>messages</code>,
+    <code>account_update</code>, <code>history</code>, etc. <span class="arrow">→</span>
+    process async <span class="arrow">→</span> respond to customers</div>
+</div>
+<p>The whole exchange hinges on speed: the authorization code is valid for only <b>30 seconds</b>,
+so the frontend must forward it and the backend must redeem it with <i>zero</i> delay.</p>
+
+<h2>3. Key Configuration Values</h2>
+<table>
+  <tr><th>Parameter</th><th>Example</th><th>Where to Find It</th></tr>
+  <tr><td><b>App ID</b></td><td>2140782060178223</td><td>App Dashboard</td></tr>
+  <tr><td><b>App Secret</b></td><td>abc123…def456</td><td>App Settings &gt; Basic</td></tr>
+  <tr><td><b>Config ID</b></td><td>1731129688347511</td><td>Facebook Login &gt; Configurations</td></tr>
+  <tr><td><b>WABA ID</b></td><td>524126980791429</td><td>Session event listener (post-signup)</td></tr>
+  <tr><td><b>Phone Number ID</b></td><td>106540352242922</td><td>Session event listener (post-signup)</td></tr>
+  <tr><td><b>Business ID</b></td><td>2729063490586005</td><td>Session event listener (post-signup)</td></tr>
+</table>
+
+<h2>4. Standard vs. Coexistence Configuration</h2>
+<div class="grid2">
+  <div>
+    <h3>Standard Mode</h3>
+    <pre><code>const config = {
+  config_id: "YOUR_CONFIG_ID",
+  response_type: "code",
+  override_default_response_type: true,
+  extras: { setup: {} }
+};</code></pre>
+  </div>
+  <div>
+    <h3>Coexistence Mode</h3>
+    <pre><code>const config = {
+  config_id: "YOUR_CONFIG_ID",
+  response_type: "code",
+  override_default_response_type: true,
+  extras: {
+    setup: {},
+    featureType:
+      "whatsapp_business_app_onboarding",
+    sessionInfoVersion: "3"
+  }
+};</code></pre>
+  </div>
+</div>
+<div class="tip"><b>Key difference:</b> Coexistence adds <code>featureType</code> +
+<code>sessionInfoVersion: "3"</code>, unlocking simultaneous use of both apps with message syncing.
+It also caps sending at <b>20 messages/second</b>.</div>
+
+
+
+
+<h2>5. The Critical Code — Immediate Token Exchange</h2>
+<div class="callout"><b>⚠ 30-Second TTL.</b> The single most important lesson: the authorization code
+expires in 30 seconds. No <code>await</code> on slow work, no user prompts, no batching — forward and
+exchange it <i>immediately</i>, or you get <b>Error 190 “Code expired.”</b></div>
+<div class="grid2">
+  <div>
+    <h3>Frontend — forward instantly</h3>
+    <pre><code>const fbLoginCallback = (response) => {
+  if (response.authResponse) {
+    const code = response.authResponse.code;
+    fetch('/api/auth/exchange-code', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ code })
+    }).catch(e =>
+      console.error('Exchange failed:', e));
+  }
+};</code></pre>
+  </div>
+  <div>
+    <h3>Backend — redeem instantly</h3>
+    <pre><code>app.post('/api/auth/exchange-code',
+  async (req, res) => {
+  const { code } = req.body;
+  const r = await axios.post(
+   'https://graph.facebook.com/v25.0/oauth/access_token',
+   { client_id: process.env.APP_ID,
+     client_secret: process.env.APP_SECRET,
+     redirect_uri: process.env.REDIRECT_URI,
+     code });
+  const { access_token, user_id } = r.data;
+  // TODO: persist token securely
+  // (DB not built yet — Day 1)
+  res.json({ success: true });
+});</code></pre>
+  </div>
+</div>
+
+<h2>6. Webhook Integration</h2>
+<p>Webhooks must use HTTPS, verify the <code>X-Hub-Signature-256</code> signature, respond
+<b>200 immediately</b>, then process asynchronously. The six event types I studied (full handlers
+are a next step):</p>
+<table>
+  <tr><th>Event</th><th>Purpose</th><th>Handler Action</th></tr>
+  <tr><td><code>account_update</code></td><td>Account connected / disconnected</td><td>Update business status</td></tr>
+  <tr><td><code>messages</code></td><td>Customer sends a message</td><td>Save &amp; route message</td></tr>
+  <tr><td><code>message_status</code></td><td>Delivery / read updates</td><td>Update message status</td></tr>
+  <tr><td><code>history</code></td><td>Chat history sync (coexistence)</td><td>Store message history</td></tr>
+  <tr><td><code>smb_app_state_sync</code></td><td>Contact sync (coexistence)</td><td>Sync contacts</td></tr>
+  <tr><td><code>smb_message_echoes</code></td><td>Messages sent from the Business App</td><td>Mirror to Cloud API</td></tr>
+</table>
+<pre><code>// Verify (GET) then handle (POST) — respond fast, process later
+app.get('/webhook', (req, res) =>
+  req.query['hub.verify_token'] === process.env.WEBHOOK_VERIFY_TOKEN
+    ? res.send(req.query['hub.challenge']) : res.sendStatus(403));
+
+app.post('/webhook', express.json(), (req, res) => {
+  res.status(200).send('ok');                       // ACK immediately
+  setImmediate(() => req.body.entry?.forEach(e =>
+    e.changes?.forEach(({ field, value }) => route(field, value))));  // process async
+});</code></pre>
+
+<h2>7. The 5 Problems I Hit (and How I Solved Them)</h2>
+<table>
+  <tr><th>Issue</th><th>Cause</th><th>Solution</th></tr>
+  <tr><td><b>“Code expired” (Error 190)</b></td><td>Code not exchanged within 30s</td><td>Exchange immediately, no delays</td></tr>
+  <tr><td><b>“Domain not allowed”</b></td><td>Domain missing from dashboard</td><td>Add to <i>Allowed Domains</i> + <i>Valid OAuth Redirect URIs</i></td></tr>
+  <tr><td><b>SDK not loading</b></td><td>Network / domain / HTTP</td><td>Serve over HTTPS, verify domain config in app</td></tr>
+  <tr><td><b>Coexistence not appearing</b></td><td>Wrong config parameters</td><td>Set <code>featureType</code> + <code>sessionInfoVersion:&nbsp;"3"</code></td></tr>
+  <tr><td><b>Webhooks silent</b></td><td>Fields not subscribed</td><td>WhatsApp &gt; Configuration &gt; Webhooks → subscribe all fields</td></tr>
+</table>
+
+<h2>8. Environment &amp; Security</h2>
+<div class="grid2">
+  <div>
+    <h3>Environment Variables (used so far)</h3>
+    <pre><code>FACEBOOK_APP_ID=your_app_id
+FACEBOOK_APP_SECRET=your_app_secret
+FACEBOOK_CONFIG_ID=your_config_id
+REDIRECT_URI=https://you.com/callback
+WEBHOOK_VERIFY_TOKEN=your_token</code></pre>
+  </div>
+  <div>
+    <h3>Security Notes</h3>
+    <ul>
+      <li>HTTPS everywhere (front, back, webhooks)</li>
+      <li>Verify <code>X-Hub-Signature-256</code> on webhooks</li>
+      <li>Secrets only in env vars, never in code</li>
+      <li>Rate limit: 20 msg/s (coexistence)</li>
+      <li>Validate all input; use CSRF protection</li>
+      <li><i>Next step:</i> encrypt &amp; persist access tokens once a DB is added</li>
+    </ul>
+  </div>
+</div>
+
+<h2>9. What I'll Do Next</h2>
+<ul>
+  <li>Add a database to <b>persist access tokens</b> + WABA / phone-number IDs securely.</li>
+  <li>Implement the <b>webhook event handlers</b> (messages, account_update, status).</li>
+  <li>Build <b>coexistence sync</b> (contacts, history, message echoes) once persistence exists.</li>
+  <li>Add token <b>refresh</b> before expiry and basic <b>monitoring</b>.</li>
+</ul>
+
+<h2>10. Key Takeaways</h2>
+<div class="tip">
+  <ul style="margin:0;">
+    <li><b>30-second TTL is everything</b> — exchange the authorization code immediately.</li>
+    <li><b>Coexistence needs special config</b> — distinct <code>featureType</code> &amp; <code>sessionInfoVersion</code>.</li>
+    <li><b>Webhooks must be fast</b> — ACK 200 first, process asynchronously.</li>
+    <li><b>Security first</b> — HTTPS everywhere and verified webhook signatures.</li>
+    <li><b>Today's milestone</b> — working frontend signup flow + initial token-exchange backend.</li>
+  </ul>
+</div>
+
+<p style="margin-top:10px;"><b>Reference docs:</b>
+Implementation &amp; onboarding guides at
+<code>developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup</code>;
+Webhooks &amp; Cloud API reference under the same path.</p>
+
+<footer>
+  WhatsApp Business API — Embedded Signup · Day 1 Learning Summary · Rajkumar · June 9, 2026 · v1.0
+</footer>
+
+</body>
+</html>
